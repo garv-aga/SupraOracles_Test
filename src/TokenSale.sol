@@ -49,6 +49,9 @@ contract TokenSale is ReentrancyGuard {
     mapping(address buyer => uint256 weiAmount) presaleBalances;
     mapping(address buyer => uint256 weiAmount) publicSaleBalances;
 
+    event PresaleRefund(address indexed buyer, uint256 indexed amount);
+    event PublicSaleRefund(address indexed buyer, uint256 indexed amount);
+
     constructor(
         address _token,
         uint256 _rate,
@@ -65,10 +68,10 @@ contract TokenSale is ReentrancyGuard {
         uint256 _pubOpenTime,
         uint256 _pubCloseTime
     ) {
-        require(PRE_OPEN_TIME >= block.timestamp);
-        require(PRE_CLOSE_TIME > PRE_OPEN_TIME);
-        require(PUB_OPEN_TIME > PRE_CLOSE_TIME);
-        require(PUB_CLOSE_TIME > PUB_OPEN_TIME);
+        require(PRE_OPEN_TIME >= block.timestamp, "Presale opens after contract deployment");
+        require(PRE_CLOSE_TIME > PRE_OPEN_TIME, "Presale should close after opening");
+        require(PUB_OPEN_TIME > PRE_CLOSE_TIME, "Public sale should open after presale closes");
+        require(PUB_CLOSE_TIME > PUB_OPEN_TIME, "Public sale should close after opening");
         token = _token;
         PRE_OPEN_TIME = _preOpenTime;
         PRE_CLOSE_TIME = _preCloseTime;
@@ -87,29 +90,29 @@ contract TokenSale is ReentrancyGuard {
     }
 
     modifier validatePrePurchase(uint256 _weiAmount) {
-        require(block.timestamp >= PRE_OPEN_TIME);
-        require(block.timestamp <= PRE_CLOSE_TIME);
-        require(_weiAmount >= PRE_MIN_CONTRIBUTION);
-        require(_weiAmount <= PRE_MAX_CONTRIBUTION);
+        require(block.timestamp >= PRE_OPEN_TIME, "Presale should be open");
+        require(block.timestamp <= PRE_CLOSE_TIME, "Presale should not have closed");
+        require(_weiAmount >= PRE_MIN_CONTRIBUTION, "Contribution amount should be greater than minimum");
+        require(_weiAmount <= PRE_MAX_CONTRIBUTION, "Contribution amount should be less than maximum");
         (bool s, uint256 result) = preWeiRaised.tryAdd(_weiAmount);
-        require(s);
-        require(result <= PRE_MAX_CAP);
+        require(s, "Presale purchase Overflow");
+        require(result <= PRE_MAX_CAP, "Presale maximum cap reached");
         _;
     }
 
     modifier validatePublicPurchase(uint256 _weiAmount) {
-        require(block.timestamp >= PUB_OPEN_TIME);
-        require(block.timestamp <= PUB_CLOSE_TIME);
-        require(_weiAmount >= PUB_MIN_CONTRIBUTION);
-        require(_weiAmount <= PUB_MAX_CONTRIBUTION);
+        require(block.timestamp >= PUB_OPEN_TIME, "Public sale should be open");
+        require(block.timestamp <= PUB_CLOSE_TIME, "Public sale should not have closed");
+        require(_weiAmount >= PUB_MIN_CONTRIBUTION, "Contribution amount should be greater than minimum");
+        require(_weiAmount <= PUB_MAX_CONTRIBUTION, "Contribution amount should be less than maximum");
         (bool s, uint256 result) = pubWeiRaised.tryAdd(_weiAmount);
-        require(s);
-        require(result <= PUB_MAX_CAP);
+        require(s, "Public sale purchase Overflow");
+        require(result <= PUB_MAX_CAP, "Public sale maximum cap reached");
         _;
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner);
+        require(msg.sender == owner, "Only owner can call");
         _;
     }
 
@@ -143,22 +146,24 @@ contract TokenSale is ReentrancyGuard {
      * @dev Presale refund of tokens if minimum cap was not reached
      */
     function presaleRefund() public payable nonReentrant {
-        require(block.timestamp > PRE_CLOSE_TIME);
-        require(preWeiRaised < PRE_MIN_CAP);
+        require(block.timestamp > PRE_CLOSE_TIME, "Presale not yet closed");
+        require(preWeiRaised < PRE_MIN_CAP, "Raised amount greater than minimum cap");
         uint256 weiAmount = presaleBalances[msg.sender];
 
         payable(msg.sender).transfer(weiAmount);
+        emit PresaleRefund(msg.sender, weiAmount);
     }
 
     /**
      * @dev Public sale refund of tokens if minimum cap was not reached
      */
     function publicSaleRefund() public payable nonReentrant {
-        require(block.timestamp > PUB_CLOSE_TIME);
-        require(pubWeiRaised < PUB_MIN_CAP);
+        require(block.timestamp > PUB_CLOSE_TIME, "Public sale not yet closed");
+        require(pubWeiRaised < PUB_MIN_CAP, "Raised amount greater than minimum cap");
         uint256 weiAmount = publicSaleBalances[msg.sender];
 
         payable(msg.sender).transfer(weiAmount);
+        emit PublicSaleRefund(msg.sender, weiAmount);
     }
 
     /**
