@@ -19,7 +19,7 @@ contract TokenSwap is ReentrancyGuard {
     IERC20 public tokenB;
     uint256 public exchangeRate;
 
-    event Swap(address indexed sender, uint256 amountA, uint256 amountB);
+    event Swap(address indexed sender, uint256 indexed amountA, uint256 indexed amountB);
 
     constructor(address _tokenA, address _tokenB, uint256 _exchangeRate) {
         owner = msg.sender;
