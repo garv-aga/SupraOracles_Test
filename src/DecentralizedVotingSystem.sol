@@ -13,6 +13,7 @@ pragma solidity 0.8.20;
 contract DecentralizedVotingSystem {
     address public owner;
     mapping(address => bool) public registeredVoters;
+    mapping(address => bool) public alreadyVoted;
     mapping(address => bool) public candidates;
     mapping(address => uint256) public votes;
 
@@ -50,6 +51,7 @@ contract DecentralizedVotingSystem {
 
     modifier validateCastVote(address _candidate) {
         require(registeredVoters[msg.sender], "You are not registered to vote");
+        require(!alreadyVoted[msg.sender], "You already voted");
         require(candidates[_candidate], "Invalid candidate");
         _;
     }
@@ -78,6 +80,7 @@ contract DecentralizedVotingSystem {
      * @param _candidate Address of the candidate to vote
      */
     function castVote(address _candidate) external validateCastVote(_candidate) {
+        alreadyVoted[msg.sender] = true;
         votes[_candidate] += 1;
         emit VoteCast(msg.sender, _candidate);
     }
