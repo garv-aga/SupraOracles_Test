@@ -27,10 +27,10 @@ contract DecentralizedVotingSystem {
         _;
     }
 
-    event VoterRegistered(address voter);
-    event CandidateAdded(address candidate);
-    event VoteCast(address voter, address candidate);
-    event ElectionResult(address winner, uint256 winningVotes);
+    event VoterRegistered(address indexed voter);
+    event CandidateAdded(address indexed candidate);
+    event VoteCast(address indexed voter, address indexed candidate);
+    event ElectionResult(address indexed winner, uint256 indexed winningVotes);
 
     constructor(uint256 voteStartTime, uint256 voteStopTime) {
         VOTE_START_TIME = voteStartTime;
